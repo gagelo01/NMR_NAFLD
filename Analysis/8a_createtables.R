@@ -51,7 +51,7 @@ dataset[author=="Borges CM", unit :="SD"]
 dataset[, trait := trait %>% gsub("Glutamine", "NMR_Metabolites", . ) %>% sub("Fat_Liver", "Liver_Fat", .)]
 
 #
-coxHR<-coxHR[exposure!="GLOBAL",][cov_inc== "+ age_enrollment + eth + sex + med + smoking + alcohol + townsend",]
+coxHR<-coxHR[exposure!="GLOBAL",][cov_inc== "+ age_enrollment + eth + sex + med + smoking + alcohol + townsend + WC",]
 coxHR[,IV:=NULL]
 coxHR[,outcome := gsub("nafld", "NAFLD", outcome)]
 #
@@ -59,7 +59,7 @@ inst <- inst_all_sign_clump
 inst[,c("id.outcome", "pval_origin.outcome", "action", "pval_origin.exposure", "id.exposure", "exposure_outcome", "mr_keep") := NULL]
 # inst <- merge(ao_small[,.(id, trait)], inst, by.x = "id", by.y = "exposure", all.y = TRUE)
 
-egger_intercept[,c("id.exposure","id.outcome") := NULL] 
+egger_intercept[,c("id.exposure","id.outcome") := NULL]
 
 #
 mvmr_results <- lapply(resmvmr, function(x)
@@ -71,7 +71,7 @@ mvmr_results[, c("clump_exposure", "otherexposure") := NULL]
 cleanify <- function(dat, argu = c("correctfor", "outcome", "exposure"), trad) {
   for(i in 1:length(argu)) {
     if(argu[i] %in% colnames(dat)) {
-      dat[, (argu[i]) :=gsub("^met-d-", "", get(argu[i]))] # 
+      dat[, (argu[i]) :=gsub("^met-d-", "", get(argu[i]))] #
       dat <- merge(trad[,.(id, trait)], dat, by.x = "id", by.y = argu[i])
       setnames(dat, c("id", "trait"), c(argu[i], paste0(argu[i], "_long")))
     }
@@ -87,22 +87,22 @@ for(i in 1:length(obj)) {
 
 #
 dt_title <- data.table(title = paste0("Supplementary Table ", 1:7),
-                       caption = c( "cox Hazard ratio results",
-                                    "Description of the datasets used.",
-                                   "Instruments and relevant statistics",
-                                   "Instrument strength and heterogeneity statistics for univariable MR",
-                                   "Univariable Mendelian Randomization results",
+                       caption = c( "Cox Hazard ratio results for all 170 metabolic factors on NAFLD adjusted for age enrollment, ethnicity, sex, medicine, smoking, alcohol, Townsend deprivation index, waist circumference",
+                                    "Description of the datasets used for Two-Sample Mendelian randomization.",
+                                   "Instruments and relevant statistics. Rsid, chromosome, position, beta, standard error, for each exposure and each SNPs",
+                                   "Instrument strength (F-statistics) and heterogeneity statistics (Cochran's Q) for univariable MR",
+                                   "Univariable Mendelian Randomization results using different pleiotropy robust MR analyses",
                                    "Univariable Mendelian Randomization Egger's intercept",
-                                   "Multivariable Mendelian randomization results."))
-                       
-#                       
+                                   "Multivariable Mendelian randomization results using different pleiotropy robust MVMR analyses"))
+
+#
 list_supdat <- list("Tables captions and titles" = dt_title,
                     "Supplementary Table 1" = coxHR,
                     "Supplementary Table 2" = dataset,
                     "Supplementary Table 3" = inst,
                     "Supplementary Table 4" = FandQ,
-                    "Supplementary Table 5" = res_univariate, 
-                    "Supplementary Table 6" = egger_intercept, 
+                    "Supplementary Table 5" = res_univariate,
+                    "Supplementary Table 6" = egger_intercept,
                     "Supplementary Table 7" = mvmr_results)
 for(i in 1:length(list_supdat)) {
   writexl::write_xlsx(x = list_supdat[[i]],
