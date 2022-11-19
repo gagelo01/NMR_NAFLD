@@ -26,7 +26,7 @@ ao_small <- ao[id %in% list.files("/mnt/sda/gagelo01/Vcffile/MRBase_vcf/"), ]
 #####
 ##Fig 1
 ###huge fig 1
-nonratioid<-trad$id 
+nonratioid<-trad$id
 
 #rescox
 rescox<- merge(rescox, trad , by.x = "exposure", by.y = "id")
@@ -42,8 +42,8 @@ uni[,panel := "Univariable MR"]
 multi <- lapply(resmvmr, function(x)
   x[, correctedfor := apply(.SD, 1,function(x) paste(setdiff(unique(exposure), x), collapse = "+")), .SDcols = "exposure"])
 multi<-rbindlist(multi)
-multi <- multi[outcome == "NAFLD" & method == "Multivariable IVW",] 
-multi[, panel := paste0("Multivariable MR with ", correctfor %>% gsub("UKB-b-9405", "WC", . ) 
+multi <- multi[outcome == "NAFLD" & method == "Multivariable IVW",]
+multi[, panel := paste0("Multivariable MR with ", correctfor %>% gsub("UKB-b-9405", "WC", . )
                         %>% gsub("logTG_GLGC_2022", "TG", . ) %>%
                           gsub("HDL_GLGC_2022", "HDL", .))]
 #rbind and format multiuni
@@ -77,7 +77,7 @@ dt[grepl("fatty acids", tolower(trait)) | trait %in% c("Docosahexaenoic acid", "
                                                        "Ratio of polyunsaturated fatty acids to total fatty acids") , category := "Fatty acids"]
 dt[grepl("Triglycerides in ", trait) | trait %in% c("Total triglycerides"), category := "Triglycerides in"]
 dt[grepl("diameter", tolower(trait)), category := "Particle diameter"]
-dt[grepl("Cholesterol in", trait) | trait %in% 
+dt[grepl("Cholesterol in", trait) | trait %in%
      c("Total cholesterol","Total free cholesterol", "Total esterified cholesterol",
        "Remnant cholesterol (non-HDL, non-LDL -cholesterol)"), category := "Cholesterol in"]
 dt[grepl("Concentration of",trait), category := "Particle concentration"]
@@ -93,9 +93,9 @@ dt[grepl("branched-chain amino acids", trait), trait := "branched-chain amino ac
 dt[ , category := factor(category, levels = unique(category))]
 #order
 dt[, density := trait %>% ifelse(grepl("VLDL", .), 1, .) %>%
-     ifelse(grepl("LDL", .), 2, .)  %>% ifelse(grepl("IDL",.), 3, . ) %>% ifelse(grepl("HDL", . ), 4, .) ] 
+     ifelse(grepl("LDL", .), 2, .)  %>% ifelse(grepl("IDL",.), 3, . ) %>% ifelse(grepl("HDL", . ), 4, .) ]
 dt[, size := trait %>% ifelse(grepl("chylomicrons", .), 1, .) %>%
-     ifelse(grepl("very large", .), 2, .)  %>% ifelse(grepl("large",.), 3, . ) %>% ifelse(grepl("medium", . ), 4, .) %>% 
+     ifelse(grepl("very large", .), 2, .)  %>% ifelse(grepl("large",.), 3, . ) %>% ifelse(grepl("medium", . ), 4, .) %>%
      ifelse(grepl("small", . ), 5, .)%>% ifelse(grepl("total",tolower(.)), 6, . )]
 col<-c("density", "size")
 dt[, (col) := lapply(.SD, as.numeric), .SDcols = col]
@@ -138,17 +138,17 @@ make_forest_plot_wrapper <- function( data,
                                                          uci =  round(doA$uci, digits = 2),
                                                          colour = ifelse(doA$signif, "red", "black"),
                                                          P_value = formatC(doA$pval, format = "e", digits = 1)))
-  
+
   mylabels <- data.frame(heading1 = as.character(list_dat[[1]]$category),
                          heading2 = as.character(list_dat[[1]]$trait),
                          heading3 = as.character(NA),
                          variable = as.character(1:nrow(list_dat[[1]])))
-  
+
   k<-make_forest_plot(panels = list_results,
                       col.key = "variable",
                       row.labels = mylabels,
                       exponentiate = exponentiate,
-                      pointsize = 2, 
+                      pointsize = 2,
                       rows = unique(mylabels$heading1),
                       col.stderr = NULL,
                       col.lci = "lci",
@@ -194,8 +194,8 @@ k <- k+ facet_grid(facets = category ~ panel, scales = "free_y", space = "free",
                    drop = TRUE) +
   theme(strip.text.y.right = element_text(angle = 0),
         legend.position="none") +
-  scale_x_continuous(breaks = c(0.6,0.8, 1,1.2, 1.6,2,3)) 
-k <- k + 
+  scale_x_continuous(breaks = c(0.6,0.8, 1,1.2, 1.6,2,3))
+k <- k +
   theme(panel.background=element_blank(),
         axis.line=element_line(),
         axis.title.y=element_blank(),
@@ -216,18 +216,18 @@ savemyplot<-function(dat,
                      device = "png",
                      col.right.heading = list("HR (95% CI)", "OR (95% CI)"),
                      xlab = "") {
-  
+
   if(method_to_forest=="make_forest_plot_wrapper"){col.right.heading<-col.right.heading}else{col.right.heading<-NULL}
   for(i in 1:length(metabolic_factors)) {
     datsmall<-dat[typefig == metabolic_factors[i],]
-    k<-get(method_to_forest)(data = datsmall, 
+    k<-get(method_to_forest)(data = datsmall,
                              metabolic_factors = tolower(metabolic_factors[i]),
                              col.right.heading = col.right.heading,
                              xlab = xlab)
     if(!("ggplot"%in%class(k))){k<-k$plot}
     ggsave(paste0("Results/", figname, i+fignum, ".", device),plot = k,
            width=724/72,
-           height=datsmall[, (length(unique(exposure))+2*length(unique(category)))*15]/72, 
+           height=datsmall[, (length(unique(exposure))+2*length(unique(category)))*15]/72,
            units="in", scale=1,
            device = device)
     saveRDS(object = k, file = paste0("Results/", "SupplementaryFigure", i, ".rds"))
@@ -237,7 +237,7 @@ savemyplot<-function(dat,
 metabolic_factors <- c("Metabolites", "Lipids","Lipoproteins")
 method_to_forest<- "make_forest_plot_wrapper" #"make_forest_plot_wrapper" #wrapper_forest
 device = "png"
-savemyplot(dat = forfig1, metabolic_factors = metabolic_factors, 
+savemyplot(dat = forfig1, metabolic_factors = metabolic_factors,
            method_to_forest = method_to_forest, device = device,
            xlab = "Effect on NAFLD")
 
@@ -256,17 +256,17 @@ mat_cor <- tmp[gsub("met-d-", "", causals), gsub("met-d-", "", causals)]
 levels <- colnames(mat_cor)
 heat <- as.data.frame(mat_cor)
 heat$row <- rownames(heat)
-rownames(heat)<-NULL  
+rownames(heat)<-NULL
 setDT(heat)
 heat <- melt(heat, id.vars = "row")
-# heat[,row:=factor(row, levels = rev(levels))] 
-# heat[,variable:=factor(variable, levels = rev(levels))]  
+# heat[,row:=factor(row, levels = rev(levels))]
+# heat[,variable:=factor(variable, levels = rev(levels))]
 
 otter_dendro <- as.dendrogram(hclust(d = dist(x = mat_cor)))
 otter_order <- order.dendrogram(otter_dendro)
 
-heat[,row:=factor(row, levels = row[otter_order], ordered = TRUE)] 
-heat[,variable:=factor(variable, levels = row[otter_order], ordered = TRUE)] 
+heat[,row:=factor(row, levels = row[otter_order], ordered = TRUE)]
+heat[,variable:=factor(variable, levels = row[otter_order], ordered = TRUE)]
 
 
 
@@ -282,15 +282,15 @@ k <- ggplot(data = heat, aes(x = variable, y = row, fill = value))  +
         legend.position = "right",
         legend.text = element_text(color = "gray20"),
         axis.title = element_blank()
-  ) + 
-  labs(fill = "") 
+  ) +
+  labs(fill = "")
 
 ggsave(paste0("Results/", "SupplementaryFigure7", ".png"), plot = k,
        width=700/72,height=600/72, units="in", scale=1,
        device = "png")
 saveRDS(object = k, file = paste0("Results/", "SupplementaryFigure7", ".rds"))
 #Supplementary figure 1
-# typeinc<-  c("cox with WC", "cox with TG", "cox with HDL", "cox with WC + TG + HDL",                         
+# typeinc<-  c("cox with WC", "cox with TG", "cox with HDL", "cox with WC + TG + HDL",
 # "MVMR with WC", "MVMR with TG", "MVMR with HDL", "MVMR with WC + TG + HDL")
 typeinc<-  c("Univariable MR", "Multivariable MR with WC")
 forsupfig2<-data[panel %in% typeinc,]
@@ -300,13 +300,13 @@ forsupfig2 <- forsupfig2[category != "",]
 forsupfig2[,panel := factor(panel, levels = typeinc)]
 forsupfig2[, signif := ifelse(exposure %in% gsub("met-d-","", causals), TRUE, FALSE)]
 
-savemyplot(dat = forsupfig2, 
+savemyplot(dat = forsupfig2,
            metabolic_factors = metabolic_factors,
            method_to_forest = method_to_forest,
            exponentiate = TRUE,
            figname = "SupplementaryFigure",
-           fignum = 0, 
-           device = device, 
+           fignum = 0,
+           device = device,
            col.right.heading = list("OR (95% CI)","OR (95% CI)"))
 
 ####
@@ -328,26 +328,26 @@ forsupfig3<-merge(forsupfig3, dt , by.x = "exposure", by.y = "exp")
 forsupfig3<-forsupfig3[category != "", ]
 forsupfig3 <- forsupfig3[order(typefig, category, colorder)]
 
-savemyplot(dat = forsupfig3, 
+savemyplot(dat = forsupfig3,
            metabolic_factors = metabolic_factors,
            method_to_forest = method_to_forest,
            exponentiate = FALSE,
            figname = "SupplementaryFigure",
-           fignum = 3, 
-           device = device, 
+           fignum = 3,
+           device = device,
            col.right.heading = list("Effect (95% CI)","Effect (95% CI)"))
 
 
 
 #Fig 3
-# # Does it survive after inclusion of triglycerides and HDL #four columns correcting for triglycerides, correcting for hdl in cox and in MVMR 
+# # Does it survive after inclusion of triglycerides and HDL #four columns correcting for triglycerides, correcting for hdl in cox and in MVMR
 # # forfig3<-data[panel %in% c("cox with TG", "cox with HDL", "MVMR with TG", "MVMR with HDL"),]
 # # forfig3[,panel := factor(panel, levels = c("cox with TG", "cox with HDL", "MVMR with TG", "MVMR with HDL"))]
 # # forfig3<- forfig3[exposure %in% gsub("met-d-", "", causals), ]
 # # forfig3[,signif := FALSE]
 # # forfig3[panel == "MVMR with TG", signif := ifelse(exposure %in% gsub("met-d-","", list_exp_multi$logTG_GLGC_2022), TRUE, FALSE)]
 # # forfig3[panel == "MVMR with HDL", signif := ifelse(exposure %in% gsub("met-d-","", list_exp_multi$HDL_GLGC_2022), TRUE, FALSE)]
-# # 
+# #
 # # wrapper_forest(data = forfig3)
 # # ggsave(paste0("Results/", "fig3", ".png"),
 # #        width=724/72,height=729/72, units="in", scale=1,
@@ -367,7 +367,7 @@ savemyplot(dat = forsupfig3,
 # dt <- trad
 # dt[,exposure := paste0("met-d-", id)]
 # causals <- intersect(expunisign, list_exp_multi$`UKB-b-9405`)
-# 
+#
 # dt[,uni_sign := exposure %in% expunisign]
 # dt[,wc_sign := exposure %in% list_exp_multi$`UKB-b-9405`]
 # dt[,hdl_sign := exposure %in% list_exp_multi$HDL_GLGC_2022]
@@ -386,9 +386,9 @@ ntile_format <- function(x, n, unitchr = "mmol/L") {
   k<-stats::quantile(x=x, probs = seq(0, 1, 1/n), na.rm = TRUE)
   dttranslate<-data.table(var_quantile = 1:n, var_quantile_long = as.character(NA))
   for(i in 1:(length(k)-1)) {
-    dttranslate[i, ]$var_quantile_long <- paste0(i, "\n [",round(k[i], digits = 2),", ", round(k[i+1], digits = 2), "] ", unitchr)
+    dttranslate[i, ]$var_quantile_long <- paste0("Quintile ", i, "\n (",round(k[i], digits = 2),", ", round(k[i+1], digits = 2),")", unitchr)
   }
-  
+
   toto <- merge(data.table(var_quantile = var_quantile, roworder = 1:length(var_quantile)), dttranslate, by = "var_quantile", all = TRUE)
   return(toto[order(roworder)]$var_quantile_long)
 }
@@ -400,8 +400,8 @@ list_res<-vector(mode = "list", length = length(vecindex))
   fit<-survival::survfit(Surv(nafld_time/365.25, nafld_censored) ~ tg_quintile, data=dt)
   k <- survminer::ggsurvplot(fit, data = dt, ylim = c(0.95,1), censor.size = 0.2,size = 0.5,legend = "right",
                              legend.title = "Triglycerides", xlab = "Follow-up (Years)", ylab = "Diagnosis-free survival",
-                             font.legend = 12)
-k
+                             font.legend = 12, legend.labs = levels(dt$tg_quintile))
+k$plot
   ggsave(file = paste0("Results/Figure4.png"),
          width=524/72,height=311/72, units="in", scale=1,
          device = "png")
@@ -411,18 +411,18 @@ mvmr_object <- list("logTG_GLGC_2022 + UKB-b-9405 ~ NAFLD correctfor = NULL (pva
 file_name <- c("Figure4")
 for(i in 1:length(file_name)) {
   mvmr_results <- lapply(as.list(mvmr_object[[i]]), function(x) resmvmr[[x]]) %>% rbindlist(.)
-  
+
   # k  <- gsub("-and-|-on-", ",", mvmr_object[[i]])
   # k <- strsplit(k, split = ",")   %>% unlist
   # uni <- res_univariate[exposure %in% k[1:2] & outcome == k[3], ]
   uni <- res_univariable[exposure %in% mvmr_results$exposure & outcome %in% mvmr_results$outcome, ]
   mvmr_results <-  mvmr_results[clump_exposure=="none", ]
   mvmr_results <- rbindlist(list(uni, mvmr_results), fill = TRUE)
-  
-  unimeth<-"Inverse variance weighted" 
+
+  unimeth<-"Inverse variance weighted"
   multimeth<- c("Multivariable IVW", "Multivariable Median",
-                "Multivariable Lasso", "Multivariable Egger")  
-  
+                "Multivariable Lasso", "Multivariable Egger")
+
   data <- mvmr_results[method %in% c(unimeth, multimeth),]
   data[, Category_other := ifelse(method %in% unimeth, "Univariable", "Multivariable")]
   data[, Category_other := factor(Category_other, levels = c("Univariable", "Multivariable"))]
@@ -441,7 +441,7 @@ for(i in 1:length(file_name)) {
     ci = 0.95,
     colour = method,
     logodds = TRUE
-  ) + 
+  ) +
     theme(text = element_text(size = 10)) +
     theme(legend.position="right") +
     ggforce::facet_col(
@@ -450,8 +450,8 @@ for(i in 1:length(file_name)) {
       scales = "free_y",
       space = "free"
     )
-  
-  
+
+
   ggsave(paste0("Results/", "Figure5", ".png"),
          width=350/72,height=250/72, units="in", scale=1,
          device = "png")
