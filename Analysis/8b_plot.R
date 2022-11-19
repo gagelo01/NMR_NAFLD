@@ -339,46 +339,6 @@ savemyplot(dat = forsupfig3,
 
 
 
-#Fig 3
-# # Does it survive after inclusion of triglycerides and HDL #four columns correcting for triglycerides, correcting for hdl in cox and in MVMR
-# # forfig3<-data[panel %in% c("cox with TG", "cox with HDL", "MVMR with TG", "MVMR with HDL"),]
-# # forfig3[,panel := factor(panel, levels = c("cox with TG", "cox with HDL", "MVMR with TG", "MVMR with HDL"))]
-# # forfig3<- forfig3[exposure %in% gsub("met-d-", "", causals), ]
-# # forfig3[,signif := FALSE]
-# # forfig3[panel == "MVMR with TG", signif := ifelse(exposure %in% gsub("met-d-","", list_exp_multi$logTG_GLGC_2022), TRUE, FALSE)]
-# # forfig3[panel == "MVMR with HDL", signif := ifelse(exposure %in% gsub("met-d-","", list_exp_multi$HDL_GLGC_2022), TRUE, FALSE)]
-# #
-# # wrapper_forest(data = forfig3)
-# # ggsave(paste0("Results/", "fig3", ".png"),
-# #        width=724/72,height=729/72, units="in", scale=1,
-# #        device = "png")
-# #"SupplementaryFigure4"
-# # Integrative figure
-# set_size = function(w, h, factor=1.5) {
-#   s = 1 * factor
-#   options(
-#     repr.plot.width=w * s,
-#     repr.plot.height=h * s,
-#     repr.plot.res=100 / factor,
-#     jupyter.plot_mimetypes='image/png',
-#     jupyter.plot_scale=1
-#   )
-# }
-# dt <- trad
-# dt[,exposure := paste0("met-d-", id)]
-# causals <- intersect(expunisign, list_exp_multi$`UKB-b-9405`)
-#
-# dt[,uni_sign := exposure %in% expunisign]
-# dt[,wc_sign := exposure %in% list_exp_multi$`UKB-b-9405`]
-# dt[,hdl_sign := exposure %in% list_exp_multi$HDL_GLGC_2022]
-# dt[,tg_sign := exposure %in% list_exp_multi$logTG_GLGC_2022]
-# model<-colnames(dt)[!(colnames(dt) %in% c("id", "trait", "exposure"))]
-# library("ggplotify")
-# k <-ComplexUpset::upset(data = dt, intersect = model, name='model', width_ratio=0.1, wrap=TRUE, set_sizes=FALSE)
-# png(paste0("Results/", "SupplementaryFigure5", ".png"))
-# k
-# dev.off()
-
 #Figure4
 #Kaplein meir curve for tg
 ntile_format <- function(x, n, unitchr = "mmol/L") {
@@ -456,3 +416,5 @@ for(i in 1:length(file_name)) {
          width=350/72,height=250/72, units="in", scale=1,
          device = "png")
 }
+
+message("This script finished without errors")
