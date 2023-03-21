@@ -35,7 +35,30 @@ out <- future_map(as.list(c(exp_mrbase,exp_server)), function(x, rsiid = unique(
   return(outr)
 }, .options = furrr_options(seed = TRUE)) %>% rbindlist(.,fill = TRUE)
 
-instmvmr <- TwoSampleMR::convert_outcome_to_exposure(out) %>% as.data.table(.)
+instmvmr <- GagnonMR::convert_outcome_to_exposure(out) %>% as.data.table(.)
+
+######report if results are in the GCKR gene region#######
+to_exclude = c("GCKR")
+window = 1e+06
+gencode <- fread("/home/couchr02/Mendel_Commun/Nicolas/GTEx/gencode.v19.genes.v7.patched_contigs.txt")
+list_gene <- vector(mode = "list", length = length(to_exclude))
+for (i in 1:length(to_exclude)) {
+  bon <- gencode[gene_name == to_exclude[i], ]
+  list_gene[[i]] <- data.frame(chr = bon[1, ]$chr, start = min(bon$start) - 
+                                 window/2, end = max(bon$end) + window/2, gene_name = bon[1, 
+                                 ]$gene_name)
+}
+region_df <- rbindlist(list_gene)
+inst[, is_in_pleiotropic_region := FALSE]
+for (i in 1:nrow(region_df)) {
+  inst[(chr.exposure == region_df[i, ]$chr) & 
+                        (pos.exposure >= region_df[i, ]$start) & (pos.exposure <= 
+                                                                    region_df[i, ]$end), is_in_pleiotropic_region := TRUE]
+}
+
+inst<- inst[is_in_pleiotropic_region == FALSE,]
+
+#####Include samplesize and modify data#####
 dtn <- data.table(id = c("ieu-b-110", "ieu-b-111", "ieu-b-108", "ieu-b-109", "ieu-b-107"),
                   samplesize = c(440546, 441016, 439214, 403943, 393193))
 list_res <- map(list(inst=inst,instmvmr=instmvmr), function(x) {
@@ -46,6 +69,7 @@ list_res <- map(list(inst=inst,instmvmr=instmvmr), function(x) {
   x[,samplesize:=NULL]
 })
 
+#### Verify that every exposures has SD = 1 #####
 inst_all_sign_clump <- list_res$inst
 split_inst <- split(inst_all_sign_clump, inst_all_sign_clump$exposure)
 ressd <- map(split_inst, function(x) {
@@ -62,17 +86,23 @@ k <- c(df_index[unit %in% u,trait],  ao_small[unit %in% u, id]) #remove binary a
 ressd <- ressd[!(exposure %in% k),]
 # ressd$sd %>% hist #all traits have been inverse ranked normal transform
 
-####extract TM?SF2 and PNPLA3
-inst<-GagnonMR::get_inst("/mnt/sda/gagelo01/Vcffile/Server_vcf/dis-2-1/dis-2-1.vcf.gz")
-main_SNP <- inst[order(pval.exposure), ][1:2,SNP]
-test<-gwasvcf::get_ld_proxies(main_SNP, bfile = ldref, tag_kb = 5000, tag_r2 = 0.8) %>% as.data.table(.)
-test<-test[,.(SNP_A,SNP_B)]
-test <- rbind(test, data.table(SNP_A = unique(test$SNP_A), SNP_B = unique(test$SNP_A)))
-test <- merge(test, data.table(SNP_A = c("rs3747207", "rs73001065"), gene.exposure = c("PNPLA3", "TM6SF2")), by = "SNP_A")
-inst_all_sign_clump <- fread( "Data/Modified/inst_all_sign_clump.txt")
-inst_all_sign_clump<-merge(inst_all_sign_clump, test[,.(SNP_B, gene.exposure)], by.x = "SNP", by.y = "SNP_B", all.x = TRUE)
-#####
+####extract TM6SF2 and PNPLA3####
+# inst<-GagnonMR::get_inst("/mnt/sda/gagelo01/Vcffile/Server_vcf/dis-2-1/dis-2-1.vcf.gz")
+# main_SNP <- inst[order(pval.exposure), ][1:2,SNP]
+# test<-gwasvcf::get_ld_proxies(main_SNP, bfile = ldref, tag_kb = 5000, tag_r2 = 0.8) %>% as.data.table(.)
+# test<-test[,.(SNP_A,SNP_B)]
+# test <- rbind(test, data.table(SNP_A = unique(test$SNP_A), SNP_B = unique(test$SNP_A)))
+# test <- merge(test, data.table(SNP_A = c("rs3747207", "rs73001065"), gene.exposure = c("PNPLA3", "TM6SF2")), by = "SNP_A")
+# inst_all_sign_clump<-merge(inst_all_sign_clump, test[,.(SNP_B, gene.exposure)], by.x = "SNP", by.y = "SNP_B", all.x = TRUE)
 
+#####create trad#####
+trad <- ao_small[author == "Borges CM", .(id,trait)]
+trad<- trad[!grepl("ratio ", tolower(trait)) | id %in% c("met-d-PUFA_pct", "met-d-Omega_6_by_Omega_3"),]
+trad[,exposure:=id]
+trad[,id := id %>% gsub("met-d-", "", .)]
+
+####Save all files#####
+fwrite(trad, "Data/Modified/trad")
 fwrite((list_res$instmvmr), "Data/Modified/all_inst_mvmr.txt")
 fwrite(GagnonMR::convert_exposure_to_outcome(list_res$instmvmr), "Data/Modified/all_outcome_mvmr.txt" )
 fwrite(list_res$inst, "Data/Modified/inst_all_sign_clump.txt")
