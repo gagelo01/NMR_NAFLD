@@ -49,14 +49,12 @@ for (i in 1:length(to_exclude)) {
                                  ]$gene_name)
 }
 region_df <- rbindlist(list_gene)
-inst[, is_in_pleiotropic_region := FALSE]
+inst[, pleiotropic_region := "none"]
 for (i in 1:nrow(region_df)) {
   inst[(chr.exposure == region_df[i, ]$chr) & 
                         (pos.exposure >= region_df[i, ]$start) & (pos.exposure <= 
-                                                                    region_df[i, ]$end), is_in_pleiotropic_region := TRUE]
+                                                                    region_df[i, ]$end), pleiotropic_region := region_df[i, ]$gene_name]
 }
-
-inst<- inst[is_in_pleiotropic_region == FALSE,]
 
 #####Include samplesize and modify data#####
 dtn <- data.table(id = c("ieu-b-110", "ieu-b-111", "ieu-b-108", "ieu-b-109", "ieu-b-107"),
