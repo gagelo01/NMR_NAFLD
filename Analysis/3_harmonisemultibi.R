@@ -6,7 +6,7 @@ library(GagnonMR)
 library(writexl)
 library(furrr)
 
-setwd("/home/gagelo01/workspace/Projects/small_MR_exploration/Test_potential_project/Platelet/")
+setwd("/home/gagelo01/workspace/Projects/small_MR_exploration/Triglycerides_dis/")
 all_inst_mvmr <- fread( "Data/Modified/all_inst_mvmr.txt")
 all_outcome_mvmr <- fread( "Data/Modified/all_outcome_mvmr.txt" )
 inst_all_sign_clump <- fread( "Data/Modified/inst_all_sign_clump.txt")
@@ -22,20 +22,19 @@ ao_small[, tomirge := tolower(id)]
 options(future.globals.maxSize= 5e9)
 plan(multicore, workers = 20, gc = TRUE)#plan(sequential)
 #######################
-#change only this section 
+#change only this section
 #univariable
-idserver_exposure <- c("trait-14-8", paste0("trait-16-", c(1,2,4)))
+idserver_exposure <- c("trait-14-8") #paste0("trait-16-", c(1,2,4))
 idserver_outcome <- c("trait-14-8", "dis-2-1")
 idmrbase_exposure <- c("ukb-b-9405", "ieu-a-61", ao_small[pmid ==32203549,]$id, ao_small[author == "Borges CM", id])
 idmrbase_outcome <- NULL
 #multivariable
 u<-c("logOR", "log odds", "log orr")
 k <- c(df_index[unit %in% u,trait],  ao_small[unit %in% u, id]) #remove binary as exposure
-k <-c(df_index[id %in% idserver_exposure & !(trait %in% k), trait], 
+k <-c(df_index[id %in% idserver_exposure & !(trait %in% k), trait],
       all_inst_mvmr[tolower(exposure) %in% tolower(idmrbase_exposure) & !(exposure %in% k), unique(exposure)])
 exposurefor<-NULL #The phenotype you want to correct for , but will be added as "exposure" which means there instruments will be selected
-correctfor <- list("UKB-b-9405", "logTG_GLGC_2022", "HDL_GLGC_2022",
-                   c("UKB-b-9405", "logTG_GLGC_2022", "HDL_GLGC_2022"))#The phenotype you want to correct for , but will be added as "correctfor" which means there instruments won't selected
+correctfor <- list("UKB-b-9405")#The phenotype you want to correct for , but will be added as "correctfor" which means there instruments won't selected
 if(!is.null(exposurefor)){k <- purrr::cross2(k,exposurefor)}
 k<-lapply(k, unlist)
 mvmr_exposure <- k[sapply(k, function(x) (length(unique(x))==length(x)))]
@@ -49,7 +48,7 @@ if(is.null(correctfor)){correctfor<-"NULL"}
 arguments_mvmr <- purrr::cross(list(mvmr_exposure, mvmr_outcome, correctfor, pval))
 test<- sapply(arguments_mvmr, function(x) !any(grepl(paste(x[[3]], collapse = "|"), x[[1]])))
 arguments_mvmr <- arguments_mvmr[test]
-arguments_mvmr <- c(arguments_mvmr, list(list(c("logTG_GLGC_2022", "UKB-b-9405"), "NAFLD", "NULL", 5e-8)))
+arguments_mvmr <- c(arguments_mvmr)
 ###############
 k <- c(df_index[unit %in% u,trait],  ao_small[unit %in% u, id])
 exp_vec<-c(all_inst_mvmr[tolower(exposure) %in% tolower(idmrbase_exposure), unique(exposure)],
@@ -72,6 +71,11 @@ harm_univariate <- map(split(arguments_uni, 1:nrow(arguments_uni)), function(x) 
 setDT(harm_univariate)
 fwrite(harm_univariate, "Data/Modified/harm_univariate.txt")
 harm_univariate[, exposure_outcome :=paste0(exposure, "_", outcome)]
+
+harm_univariate <- TwoSampleMR::steiger_filtering(harm_univariate) %>% as.data.table(.)
+harm_univariate <- harm_univariate[mr_keep==TRUE,]
+fwrite(harm_univariate, "Data/Modified/harm_univariate.txt")
+harm_univariate <- harm_univariate[steiger_dir == TRUE,]
 egger_intercept <- mr_pleiotropy_test(harm_univariate)
 harm_univariate <- harm_univariate[!(exposure == "Fasting_Insulin" & SNP == "rs1121980"),] #in the FTO region
 list_harm_univariate <- split(harm_univariate, harm_univariate$exposure_outcome)
@@ -94,7 +98,9 @@ FandQ <- lapply(list_harm_univariate, function(x) {
   return(res)
 }) %>% rbindlist(.,fill = TRUE)
 
-FandQ[,c("id.exposure", "id.outcome") := NULL]
+
+res_ivw_nopleiotropicregion <- TwoSampleMR::mr(harm_univariate[pleiotropic_region != "GCKR",], method_list = "mr_ivw")
+fwrite(res_ivw_nopleiotropicregion, "Data/Modified/res_ivw_nopleiotropicregion")
 fwrite(FandQ, "Data/Modified/FandQ_univariate.txt")
 fwrite(res_univariate, "Data/Modified/res_univariate.txt")
 setDT(egger_intercept)
@@ -102,17 +108,17 @@ fwrite(egger_intercept, "Data/Modified/egger_intercept.txt")
 
 #mvmr
 performmvmr <- function(exposure_vec, outcome_vec, correctfor=NULL,pval_threshold = 1,
-                        clump_exp_arg = "none", pval_inst = 5e-8, 
+                        clump_exp_arg = "none", pval_inst = 5e-8,
                         clump_r2 = 0.01, clump_kb = 1000) { #clump_exp_arg either none, first, or second
   message(paste0("MVMR for the effect of ", paste(exposure_vec, collapse = " + "), " on ", outcome_vec, " while correcting for ",  paste(correctfor, collapse = " + ")))
   exposure_dat <- inst_all_sign_clump[inst_all_sign_clump$exposure %in% exposure_vec & inst_all_sign_clump$pval.exposure < pval_inst,]
   k<-all_inst_mvmr[(all_inst_mvmr$exposure %in% correctfor) & (all_inst_mvmr$SNP %in% unique(exposure_dat$SNP)),]
   exposure_dat<- rbind(exposure_dat,k, fill = TRUE)
   d1 <- all_inst_mvmr[(all_inst_mvmr$exposure %in% c(exposure_vec,correctfor)) & (all_inst_mvmr$SNP %in% unique(exposure_dat$SNP)),]
-  
+
   if(clump_exp_arg == "none") {clump_exp<-NULL} else if(clump_exp_arg == "first"){clump_exp<-exposure_vec[1]} else if(clump_exp_arg == "second"){clump_exp<-exposure_vec[2]}
   inst_mvmr <- prepare_for_mvmr(exposure_dat = exposure_dat, d1 =d1,clump_r2 = clump_r2, clump_kb = clump_kb, pval_threshold = pval_threshold, clump_exp = clump_exp, harmonise_strictness = 1)
-  
+
   exposure_outcome_harmonized <- TwoSampleMR::mv_harmonise_data(exposure_dat = inst_mvmr,
                                                                 outcome_dat = all_outcome_mvmr[all_outcome_mvmr$outcome == outcome_vec,],
                                                                 harmonise_strictness = 1)
@@ -124,10 +130,10 @@ performmvmr <- function(exposure_vec, outcome_vec, correctfor=NULL,pval_threshol
 }
 
 resmvmr <- future_map(arguments_mvmr, function(x) {
-  resnone<-performmvmr(exposure_vec = x[[1]], 
-                       outcome_vec = x[[2]], 
-                       correctfor=if(x[[3]]=="NULL"){NULL}else{x[[3]]}, 
-                       clump_exp_arg = "none", 
+  resnone<-performmvmr(exposure_vec = x[[1]],
+                       outcome_vec = x[[2]],
+                       correctfor=if(x[[3]]=="NULL"){NULL}else{x[[3]]},
+                       clump_exp_arg = "none",
                        pval_inst = x[[4]])
   return(resnone)
 }, .options = furrr_options(seed = TRUE))
